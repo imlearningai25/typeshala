@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Keyboard, Zap, Trophy, BarChart2, Globe, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { useAuthStore } from "@/stores/auth.store";
 
 const FEATURES = [
   {
@@ -35,6 +36,8 @@ const STATS = [
 ];
 
 export function HomePage() {
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+
   return (
     <div className="space-y-20">
       {/* Hero */}
@@ -57,12 +60,18 @@ export function HomePage() {
             and deep analytics — built for beginners and advanced typists alike.
           </p>
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Button size="lg" as={Link} to="/practice" rightIcon={<ArrowRight className="size-5" />}>
+            <Button size="lg" as={Link} to="/lessons" rightIcon={<ArrowRight className="size-5" />}>
               Start Typing Now
             </Button>
-            <Button size="lg" variant="outline" as={Link} to="/register">
-              Create Free Account
-            </Button>
+            {isAuthenticated ? (
+              <Button size="lg" variant="outline" as={Link} to="/game">
+                ⚔️ Play Ramayana Battle
+              </Button>
+            ) : (
+              <Button size="lg" variant="outline" as={Link} to="/register">
+                Create Free Account
+              </Button>
+            )}
           </div>
         </motion.div>
 
@@ -146,17 +155,31 @@ export function HomePage() {
         <Keyboard className="mx-auto mb-4 size-12 opacity-80" />
         <h2 className="text-3xl font-bold">Ready to type faster?</h2>
         <p className="mt-3 text-brand-100">
-          Join thousands of typists improving their speed and accuracy every day.
+          {isAuthenticated
+            ? "Keep practising to climb the leaderboard and hit new records."
+            : "Join thousands of typists improving their speed and accuracy every day."}
         </p>
-        <Button
-          size="lg"
-          variant="secondary"
-          as={Link}
-          to="/register"
-          className="mt-8 text-brand-700"
-        >
-          Get Started for Free
-        </Button>
+        {isAuthenticated ? (
+          <Button
+            size="lg"
+            variant="secondary"
+            as={Link}
+            to="/lessons"
+            className="mt-8 text-brand-700"
+          >
+            Browse Lessons
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            variant="secondary"
+            as={Link}
+            to="/register"
+            className="mt-8 text-brand-700"
+          >
+            Get Started for Free
+          </Button>
+        )}
       </section>
     </div>
   );

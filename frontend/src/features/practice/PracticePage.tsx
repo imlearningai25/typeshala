@@ -17,6 +17,7 @@ import { TypingArea } from '@/components/typing/TypingArea'
 import { WpmMeter } from '@/components/typing/WpmMeter'
 import { AccuracyBar } from '@/components/typing/AccuracyBar'
 import { ResultsCard } from '@/components/typing/ResultsCard'
+import { KeyboardDisplay } from '@/components/typing/KeyboardDisplay'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/stores/auth.store'
@@ -34,8 +35,9 @@ function ElapsedTimer({ seconds }: { seconds: number }) {
 export default function PracticePage() {
   const { lessonId } = useParams<{ lessonId: string }>()
   const navigate = useNavigate()
-  const isAuthenticated = useAuthStore(s => !!s.accessToken)
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated)
   const [submitted, setSubmitted] = useState(false)
+  const [showKeyboard, setShowKeyboard] = useState(true)
 
   const { data: lesson, isLoading, error } = useQuery({
     queryKey: ['lesson', lessonId],
@@ -148,16 +150,28 @@ export default function PracticePage() {
             onBackspace={engine.handleBackspace}
           />
 
-          {/* Reset */}
-          {engine.status === 'running' && (
-            <div className="flex justify-end">
+          {/* Keyboard guide */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setShowKeyboard(v => !v)}
+              className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+            >
+              {showKeyboard ? 'Hide keyboard guide' : 'Show keyboard guide'}
+            </button>
+            {engine.status === 'running' && (
               <button
                 onClick={engine.reset}
                 className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
               >
                 Reset (Escape)
               </button>
-            </div>
+            )}
+          </div>
+
+          {showKeyboard && (
+            <KeyboardDisplay
+              currentChar={engine.status !== 'finished' ? lesson.content[engine.cursorIndex] : undefined}
+            />
           )}
 
           {/* Login nudge */}

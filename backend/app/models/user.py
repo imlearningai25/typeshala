@@ -27,7 +27,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="userrole"),
+        Enum(UserRole, name="userrole", values_callable=lambda x: [e.value for e in x]),
         default=UserRole.USER,
         nullable=False,
     )

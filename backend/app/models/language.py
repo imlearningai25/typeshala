@@ -50,7 +50,7 @@ class Lesson(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     difficulty: Mapped[DifficultyLevel] = mapped_column(
-        Enum(DifficultyLevel, name="difficultylevel"),
+        Enum(DifficultyLevel, name="difficultylevel", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=DifficultyLevel.BEGINNER,
     )

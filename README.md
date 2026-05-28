@@ -60,7 +60,6 @@ All services use the **5100-series** host ports to avoid conflicts with local da
 ### Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop) 24+
-- `make` (comes with Xcode CLT on macOS; `choco install make` on Windows)
 
 ### 1 — Clone and configure
 
@@ -75,15 +74,15 @@ cp .env.example .env
 ### 2 — Build and start
 
 ```bash
-make build    # first-time build (3–5 min)
-make up-d     # start all services detached
+docker compose build --no-cache    # first-time build (3–5 min)
+docker compose up -d               # start all services detached
 ```
 
 ### 3 — Migrate and seed
 
 ```bash
-make migrate  # run Alembic migrations (creates all 8 tables)
-make seed     # insert 3 languages + 8 lessons (+ optional superuser)
+docker compose exec backend alembic upgrade head          # run migrations (creates all 8 tables)
+docker compose exec backend python -m app.seed            # insert 3 languages + 8 lessons (+ optional superuser)
 ```
 
 ### 4 — Open the app
@@ -102,17 +101,18 @@ make seed     # insert 3 languages + 8 lessons (+ optional superuser)
 ### Backend
 
 ```bash
-# Run tests (SQLite in-memory — no Docker needed)
+# Run tests locally (SQLite in-memory — no Docker needed)
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-pytest                         # 116 tests, ≥ 80% coverage
+pytest                             # 116 tests, ≥ 80% coverage
 
 # Inside Docker
-make test-backend              # pytest in container
-make lint-backend              # ruff + mypy
-make format-backend            # ruff formatter
-make shell-backend             # bash inside the container
+docker compose exec backend pytest                                      # run tests
+docker compose exec backend ruff check app tests && \
+  docker compose exec backend mypy app                                  # lint
+docker compose exec backend ruff format app tests                       # format
+docker compose exec backend bash                                        # open shell
 ```
 
 ### Frontend
@@ -129,11 +129,11 @@ npm run build                  # production bundle
 ### Database
 
 ```bash
-make shell-db                  # open psql inside the db container
-make migrate                   # alembic upgrade head
-make migrate-auto MSG="add_foo" # autogenerate a new migration
-make migrate-down              # downgrade one step
-make seed                      # re-run seed (idempotent)
+docker compose exec db psql -U typeshala -d typeshala                  # open psql
+docker compose exec backend alembic upgrade head                        # apply migrations
+docker compose exec backend alembic revision --autogenerate -m "add_foo"  # new migration
+docker compose exec backend alembic downgrade -1                        # rollback one step
+docker compose exec backend python -m app.seed                          # re-run seed (idempotent)
 ```
 
 ---
@@ -142,12 +142,15 @@ make seed                      # re-run seed (idempotent)
 
 ```bash
 # Start app + full monitoring stack
-make monitoring-up
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 
 # Access
 open http://localhost:5105     # Prometheus
 open http://localhost:5106     # Grafana  (admin / typeshala_grafana)
 open http://localhost:5107     # cAdvisor
+
+# Stop monitoring containers only
+docker compose -f docker-compose.monitoring.yml down
 ```
 
 The pre-built **Typeshala — Application** Grafana dashboard shows:
@@ -216,7 +219,7 @@ typeshala/
 ├── docker-compose.yml               # Dev stack
 ├── docker-compose.prod.yml          # Production stack
 ├── docker-compose.monitoring.yml    # Prometheus + Grafana (composable overlay)
-├── Makefile                         # All common tasks
+├── Makefile                         # Convenience aliases for all docker compose commands
 ├── TESTING_GUIDE.md                 # Step-by-step local testing guide
 └── .env.example                     # All environment variable defaults
 ```
@@ -273,17 +276,6 @@ Required GitHub secrets: `CODECOV_TOKEN` (optional), `GITHUB_TOKEN` (automatic).
 
 ## Production Deployment
 
-```bash
-# Start production stack (multi-worker Uvicorn, resource limits, no dev mounts)
-make prod-up
-
-# With monitoring
-make prod-monitoring-up
-
-# Tear down
-make prod-down
-```
-
 Before deploying, set all production values in your environment:
 - `SECRET_KEY` — `openssl rand -hex 32`
 - `POSTGRES_PASSWORD` — strong random password
@@ -291,42 +283,15 @@ Before deploying, set all production values in your environment:
 - `SENTRY_DSN` — from your Sentry project settings
 - `CORS_ORIGINS` — your actual frontend domain(s)
 
----
+```bash
+# Start production stack (multi-worker Uvicorn, resource limits, no dev mounts)
+docker compose -f docker-compose.prod.yml up -d --build
 
-## Makefile Reference
+# With monitoring
+docker compose -f docker-compose.prod.yml -f docker-compose.monitoring.yml up -d --build
 
-```
-make help              Show all available targets
-
-make up                Start all services (attached)
-make up-d              Start all services (detached)
-make down              Stop all services
-make build             Rebuild all images (no cache)
-make logs              Tail all logs
-make logs-backend      Tail backend logs only
-
-make migrate           Run pending Alembic migrations
-make migrate-auto      Generate a new migration  MSG="description"
-make migrate-down      Rollback one migration
-make seed              Seed languages, lessons, and optional superuser
-
-make shell-backend     Open bash inside the backend container
-make shell-db          Open psql inside the db container
-
-make test-backend      Run pytest (with coverage)
-make lint-backend      Ruff + mypy
-make format-backend    Ruff formatter
-
-make test-frontend     Vitest
-make lint-frontend     ESLint
-
-make monitoring-up     Start app + Prometheus + Grafana + cAdvisor + node-exporter
-make monitoring-down   Stop monitoring containers
-make monitoring-logs   Tail monitoring logs
-
-make prod-up           Start production stack
-make prod-down         Stop production stack
-make prod-monitoring-up  Production + monitoring
+# Tear down
+docker compose -f docker-compose.prod.yml down
 ```
 
 ---

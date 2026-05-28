@@ -1,5 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
-import { Moon, Sun, Keyboard, Trophy, BarChart2, LogOut, Loader2 } from "lucide-react";
+import { Moon, Sun, Keyboard, Trophy, BarChart2, LogOut, Loader2, Swords } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth.store";
@@ -8,9 +8,10 @@ import { useLogout } from "@/hooks/useAuthMutations";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const NAV_LINKS = [
-  { to: "/lessons", label: "Lessons", icon: Keyboard },
-  { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
-  { to: "/dashboard", label: "Dashboard", icon: BarChart2 },
+  { to: "/lessons",     label: "Lessons",     icon: Keyboard },
+  { to: "/game",        label: "Game",         icon: Swords   },
+  { to: "/leaderboard", label: "Leaderboard", icon: Trophy   },
+  { to: "/dashboard",   label: "Dashboard",   icon: BarChart2 },
 ];
 
 export function Navbar() {

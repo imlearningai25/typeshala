@@ -26,6 +26,7 @@ const AdminPage = lazy(() => import("@/features/admin/AdminPage"));
 const DashboardPage = lazy(() =>
   import("@/features/dashboard/DashboardPage").then((m) => ({ default: m.DashboardPage }))
 );
+const RamayanaGame = lazy(() => import("@/features/game/RamayanaGame"));
 
 // ── React Query ────────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
@@ -90,6 +91,9 @@ export default function App() {
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
+
+            {/* Full-screen game — outside Layout so it has its own header */}
+            <Route path="game" element={<RamayanaGame />} />
           </Routes>
           </Suspense>
         </BrowserRouter>
