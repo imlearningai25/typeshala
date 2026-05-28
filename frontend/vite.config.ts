@@ -1,4 +1,3 @@
-/// <reference types="vitest" />
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
@@ -11,10 +10,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,          // container-internal port (host maps this to 5103)
+    port: 5173,
     proxy: {
       "/api": {
-        // In dev outside Docker, point directly at the backend container host port
         target: "http://localhost:5102",
         changeOrigin: true,
       },
@@ -32,17 +30,6 @@ export default defineConfig({
           charts: ["recharts"],
         },
       },
-    },
-  },
-  test: {
-    globals: true,
-    environment: "jsdom",
-    setupFiles: ["./src/test/setup.ts"],
-    passWithNoTests: true,
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "html"],
-      // Thresholds only enforced when coverage is explicitly requested
     },
   },
 });
