@@ -27,6 +27,8 @@ const DashboardPage = lazy(() =>
   import("@/features/dashboard/DashboardPage").then((m) => ({ default: m.DashboardPage }))
 );
 const RamayanaGame = lazy(() => import("@/features/game/RamayanaGame"));
+const TermsPage    = lazy(() => import("@/features/legal/TermsPage").then(m => ({ default: m.TermsPage })));
+const PrivacyPage  = lazy(() => import("@/features/legal/PrivacyPage").then(m => ({ default: m.PrivacyPage })));
 
 // ── React Query ────────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
@@ -88,6 +90,9 @@ export default function App() {
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="admin" element={<AdminPage />} />
               </Route>
+
+              <Route path="terms"   element={<TermsPage />} />
+              <Route path="privacy" element={<PrivacyPage />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>

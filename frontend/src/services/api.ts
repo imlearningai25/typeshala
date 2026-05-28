@@ -75,7 +75,9 @@ api.interceptors.response.use(
         const { data } = await axios.post(`${BASE_URL}/auth/refresh`, {
           refresh_token: refreshToken,
         });
-        const { access_token, refresh_token } = data;
+        // Backend returns snake_case; read the raw fields directly here
+        const access_token: string  = data.access_token;
+        const refresh_token: string = data.refresh_token;
         useAuthStore.getState().setTokens(access_token, refresh_token);
         processQueue(null, access_token);
         originalRequest.headers.Authorization = `Bearer ${access_token}`;

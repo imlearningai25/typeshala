@@ -68,13 +68,14 @@ export default function LessonsPage() {
   const { data: languages, isLoading: langsLoading } = useQuery({
     queryKey: ['languages'],
     queryFn: () => languageService.getAll(),
+    select: (data) => data.filter(l => l.code === 'en'),
   })
 
   const { data: lessonsPage, isLoading: lessonsLoading } = useQuery({
     queryKey: ['lessons', selectedLang, selectedDiff],
     queryFn: () =>
       languageService.getLessons({
-        language: selectedLang ?? undefined,
+        language: selectedLang ?? 'en',
         difficulty: selectedDiff ?? undefined,
         page_size: 50,
       }),
@@ -89,14 +90,10 @@ export default function LessonsPage() {
         <p className="text-neutral-500">Choose a lesson to start practising</p>
       </div>
 
-      {/* Language filter */}
-      <section aria-label="Filter by language">
-        <p className="text-xs uppercase tracking-widest text-neutral-400 mb-3">Language</p>
-        {langsLoading ? (
-          <div className="flex gap-2">
-            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-9 w-24 rounded-full" />)}
-          </div>
-        ) : (
+      {/* Language filter — hidden until more languages are added */}
+      {!langsLoading && (languages?.length ?? 0) > 1 && (
+        <section aria-label="Filter by language">
+          <p className="text-xs uppercase tracking-widest text-neutral-400 mb-3">Language</p>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setSelectedLang(null)}
@@ -118,8 +115,8 @@ export default function LessonsPage() {
               />
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Difficulty filter */}
       <section aria-label="Filter by difficulty">

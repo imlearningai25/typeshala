@@ -14,6 +14,7 @@ export interface User {
   xp: number;
   level: number;
   streakDays: number;
+  longestStreak: number;
   createdAt: string;
   updatedAt: string;
 }

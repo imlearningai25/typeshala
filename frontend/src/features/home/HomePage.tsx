@@ -60,16 +60,18 @@ export function HomePage() {
             and deep analytics — built for beginners and advanced typists alike.
           </p>
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Button size="lg" as={Link} to="/lessons" rightIcon={<ArrowRight className="size-5" />}>
-              Start Typing Now
+            <Button size="lg" asChild>
+              <Link to="/lessons">
+                Start Typing Now <ArrowRight className="size-5 ml-1" />
+              </Link>
             </Button>
             {isAuthenticated ? (
-              <Button size="lg" variant="outline" as={Link} to="/game">
-                ⚔️ Play Ramayana Battle
+              <Button size="lg" variant="outline" asChild>
+                <Link to="/game">⚔️ Play Ramayana Battle</Link>
               </Button>
             ) : (
-              <Button size="lg" variant="outline" as={Link} to="/register">
-                Create Free Account
+              <Button size="lg" variant="outline" asChild>
+                <Link to="/register">Create Free Account</Link>
               </Button>
             )}
           </div>
@@ -160,24 +162,12 @@ export function HomePage() {
             : "Join thousands of typists improving their speed and accuracy every day."}
         </p>
         {isAuthenticated ? (
-          <Button
-            size="lg"
-            variant="secondary"
-            as={Link}
-            to="/lessons"
-            className="mt-8 text-brand-700"
-          >
-            Browse Lessons
+          <Button size="lg" variant="secondary" asChild className="mt-8 text-brand-700">
+            <Link to="/lessons">Browse Lessons</Link>
           </Button>
         ) : (
-          <Button
-            size="lg"
-            variant="secondary"
-            as={Link}
-            to="/register"
-            className="mt-8 text-brand-700"
-          >
-            Get Started for Free
+          <Button size="lg" variant="secondary" asChild className="mt-8 text-brand-700">
+            <Link to="/register">Get Started for Free</Link>
           </Button>
         )}
       </section>
