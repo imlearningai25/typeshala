@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --correct: theme(colors.green.500);
+    --incorrect: theme(colors.red.500);
+    --pending: theme(colors.slate.400);
+    --cursor: theme(colors.amber.500);
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply font-sans;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-gray-300 dark:bg-gray-700;
+  }
+
+  /* Focus ring */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2;
+  }
+}
+
+@layer utilities {
+  /* Typing engine colours */
+  .text-correct { color: var(--correct); }
+  .text-incorrect {
+    color: var(--incorrect);
+    @apply underline decoration-wavy;
+  }
+  .text-pending { color: var(--pending); }
+  .border-cursor { border-color: var(--cursor); }
+}

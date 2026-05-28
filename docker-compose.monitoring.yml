@@ -1,0 +1,106 @@
+# ── Monitoring stack — attach to the main dev or prod compose network ──────────
+# Usage (dev):   docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+# Usage (prod):  docker-compose -f docker-compose.prod.yml -f docker-compose.monitoring.yml up -d
+#
+# Host-port map:
+#   5105 → Prometheus    (container: 9090)
+#   5106 → Grafana       (container: 3000)  login: admin / see GRAFANA_ADMIN_PASSWORD
+#   5107 → cAdvisor      (container: 8080)
+#   5108 → node-exporter (container: 9100)
+
+version: "3.9"
+
+services:
+
+  # ── Prometheus ────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "5105:9090"
+    depends_on:
+      - cadvisor
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ── Grafana ───────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.3.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-typeshala_grafana}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_LOG_LEVEL: warn
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "5106:3000"
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # ── cAdvisor — container metrics ──────────────────────────────────────────────
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "5107:8080"
+    command:
+      - "--housekeeping_interval=30s"
+      - "--max_housekeeping_interval=35s"
+      - "--event_storage_event_limit=default=0"
+      - "--event_storage_age_limit=default=0"
+      - "--store_container_labels=false"
+      - "--whitelisted_container_labels=com.docker.compose.service"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # ── Node Exporter — host OS metrics ───────────────────────────────────────────
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    restart: unless-stopped
+    pid: host
+    command:
+      - "--path.rootfs=/host"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "5108:9100"
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+volumes:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,31 @@
+# Prometheus scrape configuration for Typeshala
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    project: typeshala
+
+scrape_configs:
+  # FastAPI backend — exposes /metrics via prometheus-fastapi-instrumentator
+  - job_name: typeshala-backend
+    static_configs:
+      - targets: ["backend:8000"]
+    metrics_path: /metrics
+    scrape_interval: 10s
+
+  # Prometheus self-monitoring
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # cAdvisor — Docker container metrics (CPU, memory, network per container)
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+    scrape_interval: 30s
+
+  # Node Exporter — host OS metrics (CPU, disk, memory)
+  - job_name: node-exporter
+    static_configs:
+      - targets: ["node-exporter:9100"]
+    scrape_interval: 30s

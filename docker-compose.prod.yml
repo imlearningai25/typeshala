@@ -1,0 +1,134 @@
+# ── Production Docker Compose ──────────────────────────────────────────────────
+# Usage: docker-compose -f docker-compose.prod.yml up --build -d
+# Requires: .env.production file with all required secrets.
+
+version: "3.9"
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # No port exposure — only internal access
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  backend:
+    build:
+      context: ./backend
+      target: runtime
+    restart: always
+    # Production: 4 Uvicorn workers
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      POSTGRES_SERVER: db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      SECRET_KEY: ${SECRET_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+
+  worker:
+    build:
+      context: ./backend
+      target: runtime
+    restart: always
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      ENVIRONMENT: production
+      POSTGRES_SERVER: db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  frontend:
+    build:
+      context: ./frontend
+      target: runtime
+    restart: always
+    # Static files served by NGINX inside container
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: always
+    ports:
+      - "5104:80"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+volumes:
+  postgres_data:
+  redis_data:
