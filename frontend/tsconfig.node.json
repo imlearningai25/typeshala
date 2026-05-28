@@ -12,7 +12,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "types": ["node", "vitest"]
+    "skipLibCheck": true,
+    "types": ["node"]
   },
   "include": ["vite.config.ts", "vitest.config.ts"]
 }

@@ -275,39 +275,173 @@ Full interactive docs: <http://localhost:5102/api/docs>
 
 ## CI/CD
 
-Three GitHub Actions workflows:
+### How it works
 
-### `ci.yml` — runs on every push and PR
+| Workflow | Trigger | What it does |
+| --- | --- | --- |
+| `ci.yml` | Every push + PR | Run backend pytest + frontend tsc / lint / vitest |
+| `deploy-staging.yml` | Merge to `main` | CI → build images → push to GHCR → SSH deploy to staging |
+| `deploy-production.yml` | Push `v*.*.*` tag **or** manual trigger | CI guard → build images → push to GHCR → SSH deploy to production |
 
-1. **Backend** — install deps → `pytest` (SQLite in-memory, no external services)
-2. **Frontend** — `npm ci` → `tsc --noEmit` → ESLint → Vitest
+---
 
-### `deploy-staging.yml` — runs on merge to `main`
+## One-time Setup
 
-1. Runs CI
-2. Builds backend + frontend Docker images, pushes to GHCR with `stg-<sha>` tag
-3. SSHes to staging server → `docker compose pull` → `docker compose up -d` → `alembic upgrade head`
+### Step 1 — GitHub Secrets
 
-### `deploy-production.yml` — runs on `v*.*.*` tag push or manual trigger
+Go to your repository → **Settings → Secrets and variables → Actions → New repository secret** and add every secret in the table below.
 
-1. Manual trigger requires typing `deploy-prod` as confirmation
-2. Builds + pushes images tagged with the git version
-3. SSHes to production server → same deploy steps
+#### Staging secrets
 
-### Required GitHub Secrets
+| Secret name | What to put |
+| --- | --- |
+| `STG_SSH_HOST` | Public IP or hostname of your staging server (e.g. `203.0.113.10`) |
+| `STG_SSH_USER` | SSH username on that server (e.g. `ubuntu` or `deploy`) |
+| `STG_SSH_KEY` | Full contents of the **private** SSH key whose public key is in `~/.ssh/authorized_keys` on the server |
+| `STG_APP_DIR` | Absolute path where the repo lives on the server (e.g. `/home/ubuntu/typeshala`) |
+| `STG_POSTGRES_USER` | Database username (e.g. `typeshala`) |
+| `STG_POSTGRES_PASSWORD` | Strong password for Postgres |
+| `STG_POSTGRES_DB` | Database name (e.g. `typeshala_stg`) |
+| `STG_REDIS_PASSWORD` | Strong password for Redis |
+| `STG_SECRET_KEY` | 64-char random string — run `openssl rand -hex 32` |
+| `STG_CORS_ORIGINS` | Comma-separated allowed origins (e.g. `https://stg.typeshala.com`) |
 
-**Staging** — `STG_SSH_HOST` · `STG_SSH_USER` · `STG_SSH_KEY` · `STG_APP_DIR` · `STG_POSTGRES_USER` · `STG_POSTGRES_PASSWORD` · `STG_POSTGRES_DB` · `STG_REDIS_PASSWORD` · `STG_SECRET_KEY` · `STG_CORS_ORIGINS`
+#### Production secrets
 
-**Production** — same names with `PROD_` prefix.
+Same names with `PROD_` prefix instead of `STG_`:
 
-### Deploy to production
+| Secret name | What to put |
+| --- | --- |
+| `PROD_SSH_HOST` | Public IP or hostname of your production server |
+| `PROD_SSH_USER` | SSH username |
+| `PROD_SSH_KEY` | Full private SSH key contents |
+| `PROD_APP_DIR` | Absolute path on the server (e.g. `/home/ubuntu/typeshala`) |
+| `PROD_POSTGRES_USER` | Database username |
+| `PROD_POSTGRES_PASSWORD` | Strong password (different from staging) |
+| `PROD_POSTGRES_DB` | Database name (e.g. `typeshala`) |
+| `PROD_REDIS_PASSWORD` | Strong password (different from staging) |
+| `PROD_SECRET_KEY` | Different 64-char secret — run `openssl rand -hex 32` |
+| `PROD_CORS_ORIGINS` | Your production domain (e.g. `https://typeshala.com`) |
+
+> **Tip:** Generate a secret key with `openssl rand -hex 32`
+
+### Step 2 — Prepare each server
+
+Run these once on both the staging and production server:
 
 ```bash
-# Via git tag
-git tag v1.2.0 && git push --tags
+# 1. Install Docker + Docker Compose plugin
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER   # log out and back in after this
 
-# Via manual trigger
-# GitHub → Actions → "Deploy → Production" → Run workflow → type "deploy-prod"
+# 2. Clone the repo into the app directory
+git clone https://github.com/<your-org>/typeshala.git /home/ubuntu/typeshala
+cd /home/ubuntu/typeshala
+
+# 3. Log in to GitHub Container Registry so the server can pull images
+echo "<your-github-pat>" | docker login ghcr.io -u <your-github-username> --password-stdin
+# PAT needs: read:packages scope
+# Create one at: GitHub → Settings → Developer settings → Personal access tokens
+```
+
+> The deploy workflow SSHes in and runs `docker compose pull` + `docker compose up -d`,
+> so the server only needs Docker, the repo cloned, and GHCR access.
+
+### Step 3 — Add your SSH public key to each server
+
+```bash
+# On your local machine — generate a deploy key pair (no passphrase)
+ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/typeshala_deploy
+
+# Copy the PUBLIC key to the server
+ssh-copy-id -i ~/.ssh/typeshala_deploy.pub ubuntu@<your-server-ip>
+
+# The PRIVATE key goes into the GitHub secret (STG_SSH_KEY / PROD_SSH_KEY)
+cat ~/.ssh/typeshala_deploy
+# Copy the entire output (including -----BEGIN ... and -----END ...) into the secret
+```
+
+---
+
+## Deploying to Staging
+
+Staging deploys **automatically** every time you push or merge to `main`:
+
+```bash
+git push origin main
+```
+
+GitHub Actions will:
+
+1. Run all tests (backend + frontend)
+2. Build Docker images and push to `ghcr.io/<org>/typeshala/backend:stg-<sha>` and `frontend:stg-<sha>`
+3. SSH into the staging server, pull the new images and restart all containers
+4. Run `alembic upgrade head` to apply any new migrations
+
+You can watch the progress under **Actions** in your GitHub repository.
+
+---
+
+## Deploying to Production
+
+### Option A — Git tag (recommended)
+
+```bash
+# Make sure main is tested and working first
+git checkout main && git pull
+
+# Create and push a semver tag
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+GitHub Actions picks up the tag, runs the build, and deploys to production automatically.
+
+### Option B — Manual trigger
+
+1. Go to your repository → **Actions** → **Deploy → Production**
+2. Click **Run workflow**
+3. Type `deploy-prod` in the confirmation field
+4. Click **Run workflow**
+
+### First production deploy
+
+After the workflow completes, run migrations and seed data once:
+
+```bash
+ssh ubuntu@<your-prod-server>
+cd /home/ubuntu/typeshala
+
+# Apply migrations
+docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
+
+# (Optional) Seed initial data
+docker compose -f docker-compose.prod.yml exec backend python -m app.seed
+
+# (Optional) Create admin user
+FIRST_SUPERUSER_EMAIL=admin@example.com \
+FIRST_SUPERUSER_PASSWORD=YourStrongPassword1! \
+docker compose -f docker-compose.prod.yml exec backend python -m app.seed
+```
+
+---
+
+## Rolling Back
+
+```bash
+# Find the previous image tag in GitHub Packages or Actions history
+# e.g. the previous tag was v1.1.0
+
+# SSH into the server and redeploy the old tag manually
+ssh ubuntu@<your-server>
+cd /home/ubuntu/typeshala
+
+export IMAGE_TAG=v1.1.0
+docker compose -f docker-compose.prod.yml --env-file .env.production pull
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+
+# Roll back the migration if needed
+docker compose -f docker-compose.prod.yml exec backend alembic downgrade -1
 ```
 
 ---

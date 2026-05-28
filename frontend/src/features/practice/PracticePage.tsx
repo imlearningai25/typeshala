@@ -170,7 +170,7 @@ export default function PracticePage() {
 
           {showKeyboard && (
             <KeyboardDisplay
-              currentChar={engine.status !== 'finished' ? lesson.content[engine.cursorIndex] : undefined}
+              currentChar={lesson.content[engine.cursorIndex]}
             />
           )}
 
