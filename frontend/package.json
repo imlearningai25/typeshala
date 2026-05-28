@@ -15,23 +15,23 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.9.1",
     "@sentry/react": "^8.42.0",
     "@tanstack/react-query": "^5.62.9",
     "@tanstack/react-query-devtools": "^5.62.9",
     "axios": "^1.7.9",
+    "clsx": "^2.1.1",
     "framer-motion": "^11.13.1",
+    "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "react-hot-toast": "^2.4.1",
     "react-router-dom": "^7.1.1",
-    "zustand": "^5.0.2",
-    "zod": "^3.24.1",
-    "@hookform/resolvers": "^3.9.1",
-    "clsx": "^2.1.1",
+    "recharts": "^2.14.1",
     "tailwind-merge": "^2.6.0",
-    "lucide-react": "^0.468.0",
-    "recharts": "^2.14.1"
+    "zod": "^3.24.1",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
@@ -39,6 +39,7 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^22.19.19",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
