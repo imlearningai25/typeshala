@@ -12,6 +12,7 @@ describe('cn utility', () => {
   })
 
   it('ignores falsy values', () => {
-    expect(cn('a', false && 'b', undefined, null, 'c')).toBe('a c')
+    const active = false
+    expect(cn('a', active && 'b', undefined, 'c')).toBe('a c')
   })
 })
