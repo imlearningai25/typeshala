@@ -7,7 +7,6 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import languageService from '@/services/language.service'
 import type { DifficultyLevel, Language, Lesson } from '@/types'
-import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 
 const DIFFICULTY_ORDER: DifficultyLevel[] = ['beginner', 'intermediate', 'advanced']

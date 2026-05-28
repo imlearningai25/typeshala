@@ -22,7 +22,7 @@ function applyTheme(resolved: "light" | "dark") {
 
 export const useThemeStore = create<ThemeState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       theme: "system",
       resolvedTheme: getSystemTheme(),
 

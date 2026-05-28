@@ -125,22 +125,19 @@ export default function AdminPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
 
-  // Guard: redirect non-admins
-  if (!userLoading && currentUser && currentUser.role !== 'admin') {
-    navigate('/dashboard')
-    return null
-  }
+  const isAdmin = currentUser?.role === 'admin'
 
+  // All hooks must be called before any early return
   const { data: stats } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: () => adminService.getStats(),
-    enabled: currentUser?.role === 'admin',
+    enabled: isAdmin,
   })
 
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['admin-users', search, page],
     queryFn: () => adminService.getUsers({ search: search || undefined, page, page_size: 20 }),
-    enabled: currentUser?.role === 'admin',
+    enabled: isAdmin,
   })
 
   const roleMutation = useMutation({
@@ -157,6 +154,12 @@ export default function AdminPage() {
   })
 
   const isMutating = roleMutation.isPending || activeMutation.isPending
+
+  // Guard: redirect non-admins (after all hooks)
+  if (!userLoading && currentUser && !isAdmin) {
+    navigate('/dashboard')
+    return null
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">

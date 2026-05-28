@@ -35,7 +35,7 @@ jobs:
         run: pytest --tb=short -q --cov=app --cov-report=term-missing
         env:
           # Tests use SQLite in-memory + fakeredis — no real services needed
-          ENVIRONMENT: test
+          ENVIRONMENT: development
           SECRET_KEY: ci-test-secret-key-not-used-in-prod
           POSTGRES_SERVER: localhost
           POSTGRES_USER: test
