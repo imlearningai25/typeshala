@@ -11,6 +11,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    allowedHosts: ["typeshala.aipioneerlab.com"],
     proxy: {
       "/api": {
         target: "http://localhost:5102",

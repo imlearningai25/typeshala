@@ -72,14 +72,43 @@ docker compose build --no-cache    # first-time build (~3–5 min)
 docker compose up -d               # start all services
 ```
 
-### 3 — Migrate and seed
+Wait ~15 seconds for Postgres and Redis to pass their health checks before continuing.
+
+### 3 — Create the database
+
+> **Note:** Docker creates the Postgres role and database automatically on the very **first** start
+> (from `POSTGRES_USER` / `POSTGRES_DB` in `.env`). If you ever see
+> `FATAL: database "typeshala" does not exist`, the volume existed before those env vars were
+> applied. Run the full reset below.
+
+**Normal first run** — database is already created, just apply migrations:
 
 ```bash
-docker compose exec backend alembic upgrade head        # create all tables
-docker compose exec backend python -m app.seed          # insert English lessons + optional admin user
+docker compose exec backend alembic upgrade head
 ```
 
-To seed an admin user, set these environment variables before running the seed:
+**If you see `database "typeshala" does not exist`** — create it manually:
+
+```bash
+docker compose exec db createdb -U typeshala typeshala
+docker compose exec backend alembic upgrade head
+```
+
+**Full reset** (wipes all data and reinitialises from scratch):
+
+```bash
+docker compose down -v             # remove containers + named volumes
+docker compose up -d               # Postgres re-runs init scripts on fresh volume
+docker compose exec backend alembic upgrade head
+```
+
+### 4 — Seed data
+
+```bash
+docker compose exec backend python -m app.seed    # insert English lessons
+```
+
+To also create an admin account:
 
 ```bash
 FIRST_SUPERUSER_EMAIL=admin@example.com \
@@ -442,6 +471,64 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 
 # Roll back the migration if needed
 docker compose -f docker-compose.prod.yml exec backend alembic downgrade -1
+```
+
+---
+
+## Troubleshooting
+
+### `FATAL: database "typeshala" does not exist`
+
+Postgres only runs its init scripts on a **brand-new** volume. If the volume already existed (e.g. from a previous run with different env vars), the database was never created.
+
+**Quick fix — create it manually:**
+
+```bash
+docker compose exec db createdb -U typeshala typeshala
+docker compose exec backend alembic upgrade head
+```
+
+**Full reset (deletes all data):**
+
+```bash
+docker compose down -v     # removes containers + volumes
+docker compose up -d       # fresh volume — Postgres re-runs init
+docker compose exec backend alembic upgrade head
+docker compose exec backend python -m app.seed
+```
+
+### `celery: executable file not found in $PATH`
+
+The worker container needs the image to be rebuilt after `celery` was added to `requirements.txt`:
+
+```bash
+docker compose up --build worker
+```
+
+### Vite dev server blocks a custom hostname
+
+Add the hostname to `server.allowedHosts` in `frontend/vite.config.ts`:
+
+```ts
+server: {
+  allowedHosts: ["your-hostname.example.com"],
+}
+```
+
+### Frontend shows stale UI after backend changes
+
+Both services use volume mounts — no rebuild is needed for code changes. Just hard-refresh the browser (`Ctrl+Shift+R`). Rebuild is only required when `requirements.txt`, `package.json`, or a `Dockerfile` changes:
+
+```bash
+docker compose up --build backend    # or frontend
+```
+
+### `alembic upgrade head` fails with enum errors
+
+The PostgreSQL enum type (e.g. `difficultylevel`, `userrole`) was created with lowercase values. Make sure the SQLAlchemy column definition uses `values_callable`:
+
+```python
+Enum(MyEnum, name="myenum", values_callable=lambda x: [e.value for e in x])
 ```
 
 ---
