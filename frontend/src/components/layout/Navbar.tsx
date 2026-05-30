@@ -1,9 +1,10 @@
 import { Link, NavLink } from "react-router-dom";
-import { Moon, Sun, Keyboard, Trophy, BarChart2, LogOut, Loader2, Swords } from "lucide-react";
+import { Moon, Sun, Keyboard, Trophy, BarChart2, LogOut, Loader2, Swords, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth.store";
 import { useThemeStore } from "@/stores/theme.store";
+import { useSoundStore } from "@/stores/sound.store";
 import { useLogout } from "@/hooks/useAuthMutations";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
@@ -17,6 +18,7 @@ const NAV_LINKS = [
 export function Navbar() {
   const { isAuthenticated } = useAuthStore();
   const { resolvedTheme, setTheme } = useThemeStore();
+  const { isMuted, toggleMute } = useSoundStore();
   const logoutMutation = useLogout();
   const { data: user } = useCurrentUser();
 
@@ -57,6 +59,14 @@ export function Navbar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={toggleMute}
+            aria-label={isMuted ? "Unmute sounds" : "Mute sounds"}
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+          >
+            {isMuted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
+          </button>
+
           <button
             onClick={toggleTheme}
             aria-label="Toggle theme"

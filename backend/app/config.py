@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "typeshala"
     POSTGRES_PASSWORD: str = "typeshala_password"
-    POSTGRES_DB: str = "typeshala"
+    POSTGRES_DB: str = "typeshala_db"
     DATABASE_URL: str = ""  # auto-built below if empty
 
     @model_validator(mode="after")

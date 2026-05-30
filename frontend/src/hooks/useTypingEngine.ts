@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { playKeyClick } from '@/utils/sounds'
 
 export type CharState = 'pending' | 'correct' | 'incorrect'
 
@@ -113,6 +114,7 @@ export function useTypingEngine(text: string): TypingEngineState {
 
       const expected = text[idx]
       const isCorrect = char === expected
+      playKeyClick(isCorrect)
       const nowMs = Date.now() - (startTimeRef.current ?? Date.now())
 
       // Record keystroke

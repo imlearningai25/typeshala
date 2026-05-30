@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
+import { playKeyClick, playArrowFire, playDemonDeath, playLifeLost } from '@/utils/sounds'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart } from 'lucide-react'
+import { Heart, Volume2, VolumeX } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { useSoundStore } from '@/stores/sound.store'
 
 // ── Word banks ────────────────────────────────────────────────────────────────
 
@@ -103,6 +105,7 @@ function ArrowSprite() {
 
 export default function RamayanaGame() {
   const navigate = useNavigate()
+  const { isMuted, toggleMute } = useSoundStore()
 
   const [diff, setDiff] = useState<Diff>('easy')
 
@@ -213,6 +216,7 @@ export default function RamayanaGame() {
       g.lives -= 1
       setLives(g.lives)
       setShakeKey(k => k + 1)
+      playLifeLost()
       if (g.lives <= 0) {
         phaseRef.current = 'over'
         setOutcome('defeat')
@@ -267,7 +271,14 @@ export default function RamayanaGame() {
     if (!t) return
     const g   = gameRef.current
     const hit = g.enemies.find(e => !e.exploding && e.word === t)
-    if (!hit) return
+
+    if (!hit) {
+      const hasProgress = g.enemies.some(e => !e.exploding && e.word.startsWith(t))
+      playKeyClick(hasProgress)
+      return
+    }
+
+    playArrowFire()
 
     // Fire arrow
     const container = containerRef.current
@@ -288,6 +299,7 @@ export default function RamayanaGame() {
     setRamaShoot(k => k + 1)
 
     setTimeout(() => {
+      playDemonDeath()
       gameRef.current.enemies = gameRef.current.enemies.map(e =>
         e.id === hit.id ? { ...e, exploding: true } : e
       )
@@ -323,12 +335,21 @@ export default function RamayanaGame() {
 
       {/* ── Header ── */}
       <header className="shrink-0 flex items-center justify-between px-4 py-2.5 bg-slate-900 border-b border-slate-800 z-20">
-        <button
-          onClick={() => { if (rafRef.current) cancelAnimationFrame(rafRef.current); navigate(-1) }}
-          className="text-sm text-slate-400 hover:text-white transition-colors"
-        >
-          ← Menu
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { if (rafRef.current) cancelAnimationFrame(rafRef.current); navigate(-1) }}
+            className="text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            ← Menu
+          </button>
+          <button
+            onClick={toggleMute}
+            aria-label={isMuted ? "Unmute sounds" : "Mute sounds"}
+            className="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            {isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+          </button>
+        </div>
 
         {/* Countdown — prominent centre piece */}
         <div className="text-center">

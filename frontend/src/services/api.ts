@@ -50,7 +50,9 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthEndpoint = /\/auth\/(login|register|refresh)/.test(originalRequest.url ?? "");
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         // Queue requests while refresh is in-flight
         return new Promise((resolve, reject) => {
@@ -67,6 +69,7 @@ api.interceptors.response.use(
       const refreshToken = useAuthStore.getState().refreshToken;
 
       if (!refreshToken) {
+        isRefreshing = false;
         useAuthStore.getState().logout();
         return Promise.reject(error);
       }
